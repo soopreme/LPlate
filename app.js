@@ -1,39 +1,21 @@
 const express = require('express');
-const mysql = require('mysql');
+
 const sanitize = require('sanitize')();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 
+const { connect, query } = require('./db');
+const authentication = require('./authentication');
+const { gentoken } = require('./token');
+
 var app = express();
-var connection = mysql.createConnection({
-    host: process.env.PORT,
-    user: process.env.USER,
-    password: process.env.PASSWORD,
-    database: process.env.DB
-});
 
 const saltRounds = 10;
 const privateKey = fs.readFileSync(process.env.PRIVKEYPATH);
 const publicKey = fs.readFileSync(process.env.PUBKEYPATH);
 
-connection.connect();
-
-var query = query => new Promise((resolve, reject) => {
-    connection.query(query, (error, results, fields) => {
-        if(error) {
-            reject(error);
-        }
-        
-        if(!results) {
-            return null;
-        } else if(results.length == 1) {
-            resolve(results[0]);
-        } else {
-            resolve(results);
-        }
-    });
-});
+connect();
 
 var genhash = string => new Promise((resolve, reject) => {
     bcrypt.genSalt(saltRounds, (err, salt) => {
@@ -59,16 +41,6 @@ var checkhash = (string, hash) => new Promise((resolve, reject) => {
         } else {
             reject({code: 400});
         }
-    })
-});
-
-var gentoken = userRow => new Promise((resolve, reject) => {
-    var { username, password, ID } = userRow;
-    jwt.sign({ username, password, ID }, privateKey, { algorithm: 'RS256' }, (err, token) => {
-        if(err) {
-            reject({code: 500, err});
-        }
-        resolve(token);
     })
 });
 
@@ -129,3 +101,10 @@ app.post('/login', (req, res) => {
     });
 });
 
+
+
+app.use(authentication);
+
+/* All below routes require a bearer token */
+
+app.use("/list", list);
