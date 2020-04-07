@@ -1,8 +1,11 @@
 const { checktoken } = require('./token');
 
 var authenticationMiddleware = (req, res, next) => {
-    var { Authentication } = req.headers;
-    var token = Authentication.split(" ")[1];
+    var Authorization = req.header('Authorization');
+    if(!Authorization) {
+	    res.status(401).json({err: "Unauthorized"});
+    }
+    var token = Authorization.split(" ")[1];
     checktoken(token)
     .then(payload => {
         res.locals.payload = payload;

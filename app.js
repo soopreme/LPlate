@@ -1,12 +1,13 @@
 const express = require('express');
 
-const sanitize = require('sanitize')();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { check, validationResult } = require('express-validator');
 
 const { connect, query } = require('./db');
 const authentication = require('./authentication');
 const { gentoken } = require('./token');
+const list = require('./list');
 
 var app = express();
 
@@ -36,50 +37,64 @@ var checkhash = (string, hash) => new Promise((resolve, reject) => {
         if(result) {
             resolve(result);
         } else {
-            reject({code: 400});
+            reject({code: 400, err: "result does not exist"});
         }
     })
 });
 
-app.post('/register', (req, res) => {
-    var { email, username, password } = req.body;
-    var emailSanitized = sanitize.value(email, 'string');
-    var usernameSanitized = sanitize.value(username, 'string');
-    
+app.use(express.json());
 
-    query(`SELECT * FROM 'users' WHERE username='${usernameSanitized}'`)
+app.post('/register', [
+	check('username').isLength({min: 3, max: 255}).trim().escape(),
+	check('email').isEmail().normalizeEmail()
+], (req, res) => {
+    var { email, username, password } = req.body;
+    console.log(email);
+    console.log(username);
+    console.log(password);
+    query(`SELECT * FROM users WHERE username='${username}';`)
     .then(result => {
-        if(result) {
+	console.log(result);
+        if(result != []) {
             reject({code: 409, err:"Username is already in use"});
-        }
-        return query(`SELECT * FROM 'users' WHERE email='${emailSanitized}'`);
+        } else {
+            return query(`SELECT * FROM users WHERE email='${email}';`)
+    	}
     })
     .then(result => {
+	console.log(result);
         if(result) {
             reject({code: 409, err:"Email is already in use"});
         }
-        return genhash(password);
+        return genhash(password)
     })
     .then(passwordHashed => {
-        return query(`INSERT INTO 'users' (email, username, password) VALUES ('${emailSanitized}', '${usernameSanitized}', '${passwordHashed}')`);
+	console.log(passwordHashed);
+        return query(`INSERT INTO users (email, username, password) VALUES ('${email}', '${username}', '${passwordHashed}')`);
     })
     .then(result => {
-        return gentoken(result);
+	console.log(result);
+        return gentoken(result)
     })
     .then(token => {
+	console.log(token);
         return res.status(200).json({token});
     })
     .catch(err => {
+	if(!err.code) {
+		return res.status(500).json({err});
+	}
         return res.status(err.code).json({err: err.err});
     });
 });
 
-app.post('/login', (req, res) => {
+app.post('/login', [
+	check('username').isLength({min: 3, max: 255}).trim().escape()	
+], (req, res) => {
     var {username, password} = req.body;
-    var usernameSanitized = sanitize.value(username, 'string');
     var userObject;
 
-    query(`SELECT * FROM 'users' WHERE username='${usernameSanitized}'`)
+    query(`SELECT * FROM users WHERE username='${username}'`)
     .then(result => {
         if(!result) {
             reject({code: 401, err: "User not found"});
@@ -94,14 +109,19 @@ app.post('/login', (req, res) => {
         return res.status(200).json({token});
     })
     .catch(err => {
+	if(!err.code) {
+		err.code = 500;
+	}
         return res.status(err.code).json({err: err.err});
     });
 });
 
-
+app.listen(2004);
+console.log("listening on 2004");
 
 app.use(authentication);
 
 /* All below routes require a bearer token */
 
 app.use("/list", list);
+

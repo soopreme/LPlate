@@ -1,10 +1,10 @@
 const mysql = require('mysql');
 
 var connection = mysql.createConnection({
-    host: process.env.PORT,
-    user: process.env.USER,
-    password: process.env.PASSWORD,
-    database: process.env.DB
+    host: `${process.env.HOST}`,
+    user: `${process.env.USER}`,
+    password: `${process.env.PASSWORD}`,
+    database: `${process.env.DB}`
 });
 
 var connect = () => {
@@ -17,8 +17,9 @@ var connect = () => {
     }
 }
 
-var query = query => new Promise((resolve, reject) => {
-    connection.query(query, (err, results, fields) => {
+var query = q => new Promise((resolve, reject) => {
+    console.log(q);
+    connection.query(q, (err, results, fields) => {
         if(err) {
             reject({code: 500, err});
         }
@@ -33,7 +34,7 @@ var query = query => new Promise((resolve, reject) => {
     });
 });
 
-module.exports({
+module.exports = {
         connect,
         query
-});
+};
