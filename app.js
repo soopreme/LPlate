@@ -3,7 +3,6 @@ const express = require('express');
 const sanitize = require('sanitize')();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const fs = require('fs');
 
 const { connect, query } = require('./db');
 const authentication = require('./authentication');
@@ -12,8 +11,6 @@ const { gentoken } = require('./token');
 var app = express();
 
 const saltRounds = 10;
-const privateKey = fs.readFileSync(process.env.PRIVKEYPATH);
-const publicKey = fs.readFileSync(process.env.PUBKEYPATH);
 
 connect();
 

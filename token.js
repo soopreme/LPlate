@@ -1,4 +1,8 @@
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+const privateKey = fs.readFileSync(process.env.PRIVKEYPATH);
+const publicKey = fs.readFileSync(process.env.PUBKEYPATH);
 
 var gentoken = userRow => new Promise((resolve, reject) => {
     var { username, password, ID } = userRow;
