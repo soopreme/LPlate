@@ -48,6 +48,10 @@ app.post('/register', [
 	check('username').isLength({min: 3, max: 255}).trim().escape(),
 	check('email').isEmail().normalizeEmail()
 ], (req, res) => {
+    const errors = validationResult(req);
+    if(!errors.isEmpty()) {
+        return res.status(400).json({ err: errors.array });
+    }
     var { email, username, password } = req.body;
     console.log(email);
     console.log(username);
@@ -65,7 +69,7 @@ app.post('/register', [
             reject({code: 409, err:"Email is already in use"});
         } else {
             return genhash(password)
-	}
+	    }
     })
     .then(passwordHashed => {
         return query(`INSERT INTO users (email, username, password) VALUES ('${email}', '${username}', '${passwordHashed}')`);
@@ -89,6 +93,10 @@ app.post('/register', [
 app.post('/login', [
 	check('username').isLength({min: 3, max: 255}).trim().escape()	
 ], (req, res) => {
+    const errors = validationResult(req);
+    if(!errors.isEmpty()) {
+        return res.status(400).json({ err: errors.array });
+    }
     var {username, password} = req.body;
     var userObject;
 
@@ -123,3 +131,30 @@ app.use(authentication);
 
 app.use("/list", list);
 
+app.get('/template/:id', (req, res) => {
+    var { id } = req.params;
+    if(typeof id != 'number') {
+        return res.status(400).json({err: "template ID must be a number"});
+    }
+    query(`SELECT * FROM templates WHERE ID=${id}`)
+    .then(result => {
+        if(result.length == 0) {
+            reject({code: 404, err: "Template not found"})
+        } else {
+            return res.json(result);
+        }
+    })
+});
+
+app.post('/new/template', [
+    check('title').isLength({ min: 1, max: 255 }).trim().escape(),
+    check('body').isLength({min: 10}).escape(),
+    check('url').isURL()
+], (req, res) => {
+    const errors = validationResult(req);
+    if(!errors.isEmpty()) {
+        return res.status(400).json({ err: errors.array() });
+    }
+    var {title, body, url} = req.body
+    
+})
