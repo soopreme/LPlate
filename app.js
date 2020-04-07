@@ -54,22 +54,20 @@ app.post('/register', [
     console.log(password);
     query(`SELECT * FROM users WHERE username='${username}';`)
     .then(result => {
-	console.log(result);
-        if(result != []) {
+        if(result.length > 0) {
             reject({code: 409, err:"Username is already in use"});
         } else {
             return query(`SELECT * FROM users WHERE email='${email}';`)
     	}
     })
     .then(result => {
-	console.log(result);
-        if(result) {
+        if(result.length > 0) {
             reject({code: 409, err:"Email is already in use"});
-        }
-        return genhash(password)
+        } else {
+            return genhash(password)
+	}
     })
     .then(passwordHashed => {
-	console.log(passwordHashed);
         return query(`INSERT INTO users (email, username, password) VALUES ('${email}', '${username}', '${passwordHashed}')`);
     })
     .then(result => {
