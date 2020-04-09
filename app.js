@@ -155,6 +155,20 @@ app.post('/new/template', [
     if(!errors.isEmpty()) {
         return res.status(400).json({ err: errors.array() });
     }
-    var {title, body, url} = req.body
+    var {title, body, url} = req.body;
+    var {username} = res.locals.payload;
     
-})
+    query(`INSERT INTO templates (author, name, description, link) VALUES ('${username}', '${title}', '${body}', '${url}'); SELECT * FROM templates WHERE ID= LAST_INSERT_ID();`)
+    .then(result => {
+        if(!result.id) {
+            reject({code: 500, err: "Internal Server Error"});
+        }
+        resolve(result.id);
+    })
+    .then(id => {
+        res.json({id});
+    })
+    .catch(err => {
+        res.status(err.code).json({err: err.err});
+    });
+});
