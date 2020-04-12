@@ -8,6 +8,7 @@ const { connect, query } = require('./db');
 const authentication = require('./authentication');
 const { gentoken } = require('./token');
 const list = require('./list');
+const template = require('./template');
 
 var app = express();
 
@@ -122,53 +123,39 @@ app.post('/login', [
     });
 });
 
-app.listen(2004);
-console.log("listening on 2004");
-
 app.use(authentication);
 
 /* All below routes require a bearer token */
 
 app.use("/list", list);
+app.use("/template", template);
 
-app.get('/template/:id', (req, res) => {
-    var { id } = req.params;
-    if(typeof id != 'number') {
-        return res.status(400).json({err: "template ID must be a number"});
-    }
-    query(`SELECT * FROM templates WHERE ID=${id}`)
+app.get('/stars', (req, res) => {
+    var {id} = res.locals.payload;
+    query(`SELECT * FROM stars WHERE userID=${id}`)
     .then(result => {
         if(result.length == 0) {
-            reject({code: 404, err: "Template not found"})
+            reject({code: 404, err: "No stars found"});
         } else {
-            return res.json(result);
+            var stars = [];
+            result.forEach(async row => {
+                let star = await query(`SELECT * FROM templates WHERE ID=${row.templateID}`);
+                stars.push(star);
+            });
+            return stars;
         }
     })
-});
-
-app.post('/new/template', [
-    check('title').isLength({ min: 1, max: 255 }).trim().escape(),
-    check('body').isLength({min: 10}).escape(),
-    check('url').isURL()
-], (req, res) => {
-    const errors = validationResult(req);
-    if(!errors.isEmpty()) {
-        return res.status(400).json({ err: errors.array() });
-    }
-    var {title, body, url} = req.body;
-    var {username} = res.locals.payload;
-    
-    query(`INSERT INTO templates (author, name, description, link) VALUES ('${username}', '${title}', '${body}', '${url}'); SELECT * FROM templates WHERE ID= LAST_INSERT_ID();`)
-    .then(result => {
-        if(!result.id) {
-            reject({code: 500, err: "Internal Server Error"});
-        }
-        resolve(result.id);
-    })
-    .then(id => {
-        res.json({id});
+    .then(stars => {
+        return res.json(stars);
     })
     .catch(err => {
-        res.status(err.code).json({err: err.err});
+        if(!err.code) {
+            return res.status(500).json({err});
+        } else {
+            return res.status(err.code).json({err: err.err});
+        }
     });
 });
+
+app.listen(2004);
+console.log("listening on 2004");
